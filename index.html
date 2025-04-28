@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Insane GG Crash Predictor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+        }
+        .pulse-animation {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(74, 222, 128, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }
+        }
+        .chart-container {
+            height: 400px;
+            position: relative;
+        }
+        .history-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .blink {
+            animation: blink 1s step-start infinite;
+        }
+        @keyframes blink {
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans">
+    <div class="min-h-screen">
+        <!-- Header -->
+        <header class="gradient-bg text-white shadow-lg">
+            <div class="container mx-auto px-4 py-6">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center space-x-3">
+                        <i class="fas fa-rocket text-2xl"></i>
+                        <h1 class="text-2xl font-bold">Insane GG Crash Predictor</h1>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <button id="connectBtn" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-medium transition">
+                            <i class="fas fa-plug mr-2"></i>Conectar
+                        </button>
+                        <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition">
+                            <i class="fas fa-cog mr-2"></i>Configurações
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="container mx-auto px-4 py-8">
+            <!-- Stats Overview -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white rounded-xl shadow-md p-6 flex items-center">
+                    <div class="bg-blue-100 p-3 rounded-full mr-4">
+                        <i class="fas fa-chart-line text-blue-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-gray-500 text-sm">Total de Rodadas</p>
+                        <h3 class="text-2xl font-bold" id="totalRounds">0</h3>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-xl shadow-md p-6 flex items-center">
+                    <div class="bg-green-100 p-3 rounded-full mr-4">
+                        <i class="fas fa-bolt text-green-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-gray-500 text-sm">10x+ Hoje</p>
+                        <h3 class="text-2xl font-bold" id="highMultipliers">0</h3>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-xl shadow-md p-6 flex items-center">
+                    <div class="bg-purple-100 p-3 rounded-full mr-4">
+                        <i class="fas fa-percentage text-purple-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-gray-500 text-sm">Chance 10x+</p>
+                        <h3 class="text-2xl font-bold" id="chance10x">0%</h3>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-xl shadow-md p-6 flex items-center">
+                    <div class="bg-yellow-100 p-3 rounded-full mr-4">
+                        <i class="fas fa-clock text-yellow-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-gray-500 text-sm">Próximo 10x+</p>
+                        <h3 class="text-2xl font-bold" id="next10x">--:--</h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Prediction Section -->
+            <div class="bg-white rounded-xl shadow-md overflow-hidden mb-8">
+                <div class="gradient-bg px-6 py-4 flex justify-between items-center">
+                    <h2 class="text-xl font-bold text-white">Previsão Atual</h2>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-sm text-blue-200">Status:</span>
+                        <span class="bg-green-500 text-white text-xs px-2 py-1 rounded-full" id="statusIndicator">Analisando...</span>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <div class="flex flex-col md:flex-row gap-8">
+                        <div class="md:w-2/3">
+                            <div class="chart-container">
+                                <canvas id="historyChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="md:w-1/3">
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                                <h3 class="font-bold text-blue-800 mb-2 flex items-center">
+                                    <i class="fas fa-lightbulb mr-2"></i> Recomendação
+                                </h3>
+                                <p class="text-gray-700 mb-3" id="recommendationText">Analisando padrões históricos para determinar a melhor estratégia...</p>
+                                <div class="bg-white rounded-lg p-3 border border-blue-100">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <span class="text-sm text-gray-600">Confiança:</span>
+                                        <span class="text-sm font-bold text-blue-600" id="confidenceLevel">75%</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-2">
+                                        <div class="bg-blue-600 h-2 rounded-full" style="width: 75%" id="confidenceBar"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                                <h3 class="font-bold text-yellow-800 mb-2 flex items-center">
+                                    <i class="fas fa-exclamation-triangle mr-2"></i> Alerta de Oportunidade
+                                </h3>
+                                <div class="flex items-center justify-between mb-3">
+                                    <span class="text-gray-700">Próximo 10x+ em:</span>
+                                    <span class="text-xl font-bold text-green-600 blink" id="countdown">--</span>
+                                </div>
+                                <button id="betNowBtn" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg transition flex items-center justify-center pulse-animation">
+                                    <i class="fas fa-coins mr-2"></i> APOSTAR AGORA
+                                </button>
+                                <p class="text-xs text-gray-500 mt-2 text-center">Baseado na análise dos últimos 500 rounds</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History Section -->
+            <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                <div class="gradient-bg px-6 py-4">
+                    <h2 class="text-xl font-bold text-white">Histórico de Rodadas</h2>
+                </div>
+                <div class="p-4">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rodada</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Multiplicador</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Horário</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Padrão</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200" id="historyTableBody">
+                                <!-- Will be populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="mt-4 flex justify-between items-center">
+                        <div class="text-sm text-gray-500">
+                            Mostrando <span id="showingFrom">1</span>-<span id="showingTo">10</span> de <span id="totalItems">0</span> rodadas
+                        </div>
+                        <div class="flex space-x-2">
+                            <button class="px-3 py-1 border rounded-md text-sm disabled:opacity-50" id="prevPage" disabled>
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <button class="px-3 py-1 border rounded-md text-sm disabled:opacity-50" id="nextPage" disabled>
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="gradient-bg text-white py-6">
+            <div class="container mx-auto px-4">
+                <div class="flex flex-col md:flex-row justify-between items-center">
+                    <div class="mb-4 md:mb-0">
+                        <h2 class="text-xl font-bold flex items-center">
+                            <i class="fas fa-chart-pie mr-2"></i> Insane GG Predictor
+                        </h2>
+                        <p class="text-blue-200 text-sm">Ferramenta de análise estatística para Crash</p>
+                    </div>
+                    <div class="flex space-x-6">
+                        <a href="#" class="hover:text-blue-300 transition">
+                            <i class="fab fa-discord text-xl"></i>
+                        </a>
+                        <a href="#" class="hover:text-blue-300 transition">
+                            <i class="fab fa-telegram text-xl"></i>
+                        </a>
+                        <a href="#" class="hover:text-blue-300 transition">
+                            <i class="fab fa-github text-xl"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="mt-6 pt-6 border-t border-blue-800 text-center text-sm text-blue-200">
+                    <p>⚠️ Esta ferramenta não garante ganhos e deve ser usada com responsabilidade. O jogo envolve risco.</p>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Mock data - in a real app, this would come from an API or scraping
+        const mockRounds = [];
+        const now = new Date();
+        
+        // Generate mock data
+        for (let i = 0; i < 500; i++) {
+            const minutesAgo = i * 2;
+            const crashTime = new Date(now.getTime() - minutesAgo * 60000);
+            
+            // Generate multiplier with some patterns
+            let multiplier;
+            if (i % 50 === 0) {
+                // Every 50 rounds, a high multiplier (10x-100x)
+                multiplier = (10 + Math.random() * 90).toFixed(2);
+            } else if (i % 15 === 0) {
+                // Every 15 rounds, a medium multiplier (2x-10x)
+                multiplier = (2 + Math.random() * 8).toFixed(2);
+            } else {
+                // Most rounds are low (1x-2x)
+                multiplier = (1 + Math.random()).toFixed(2);
+            }
+            
+            mockRounds.push({
+                id: 1000 + i,
+                multiplier: parseFloat(multiplier),
+                time: crashTime.toLocaleTimeString(),
+                date: crashTime.toLocaleDateString(),
+                pattern: i % 50 === 0 ? "Alta probabilidade" : i % 15 === 0 ? "Média probabilidade" : "Baixa probabilidade"
+            });
+        }
+
+        // Initialize Chart
+        let historyChart;
+        function initChart() {
+            const ctx = document.getElementById('historyChart').getContext('2d');
+            
+            // Get last 50 rounds for the chart
+            const chartData = mockRounds.slice(0, 50).reverse();
+            
+            historyChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartData.map(round => round.id),
+                    datasets: [{
+                        label: 'Multiplicador',
+                        data: chartData.map(round => round.multiplier),
+                        borderColor: 'rgb(59, 130, 246)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        pointBackgroundColor: function(context) {
+                            const value = context.dataset.data[context.dataIndex];
+                            return value >= 10 ? 'rgb(34, 197, 94)' : 
+                                   value >= 2 ? 'rgb(234, 179, 8)' : 'rgb(239, 68, 68)';
+                        },
+                        pointRadius: function(context) {
+                            const value = context.dataset.data[context.dataIndex];
+                            return value >= 10 ? 6 : 4;
+                        }
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return Multiplicador: ${context.parsed.y.toFixed(2)}x;
+                                }
+                            }
+                        },
+                        legend: {
+                            display: false
+                        },
+                        annotation: {
+                            annotations: {
+                                line10x: {
+                                    type: 'line',
+                                    yMin: 10,
+                                    yMax: 10,
+                                    borderColor: 'rgb(34, 197, 94)',
+                                    borderWidth: 2,
+                                    borderDash: [6, 6],
+                                    label: {
+                                        content: '10x',
+                                        enabled: true,
+                                        position: 'left'
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + 'x';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update stats
+        function updateStats() {
+            const totalRounds = mockRounds.length;
+            const highMultipliers = mockRounds.filter(r => r.multiplier >= 10).length;
+            const chance10x = ((highMultipliers / totalRounds) * 100).toFixed(1);
+            
+            document.getElementById('totalRounds').textContent = totalRounds;
+            document.getElementById('highMultipliers').textContent = highMultipliers;
+            document.getElementById('chance10x').textContent = chance10x + '%';
+            
+            // Find when next 10x might occur based on patterns
+            const lastHighIndex = mockRounds.findIndex(r => r.multiplier >= 10);
+            const avgBetweenHigh = totalRounds / highMultipliers;
+            const roundsSinceLastHigh = lastHighIndex;
+            const predictedNext = Math.round(avgBetweenHigh - roundsSinceLastHigh);
+            
+            if (predictedNext > 0) {
+                const nextTime = new Date(now.getTime() + predictedNext * 2 * 60000);
+                document.getElementById('next10x').textContent = nextTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                
+                // Update countdown
+                const countdownElement = document.getElementById('countdown');
+                let minutesLeft = predictedNext * 2;
+                
+                const countdownInterval = setInterval(() => {
+                    if (minutesLeft <= 0) {
+                        clearInterval(countdownInterval);
+                        countdownElement.textContent = "AGORA!";
+                        countdownElement.classList.add('blink');
+                        countdownElement.classList.remove('text-green-600');
+                        countdownElement.classList.add('text-red-500');
+                    } else {
+                        countdownElement.textContent = ${minutesLeft} min;
+                        minutesLeft--;
+                    }
+                }, 60000);
+                
+                // Initial display
+                countdownElement.textContent = ${minutesLeft} min;
+            } else {
+                document.getElementById('next10x').textContent = "Em breve";
+            }
+            
+            // Update recommendation
+            const recommendationElement = document.getElementById('recommendationText');
+            if (roundsSinceLastHigh > avgBetweenHigh * 0.8) {
+                recommendationElement.textContent = "Alta probabilidade de um multiplicador 10x+ nas próximas rodadas. Considere aumentar seu investimento.";
+                document.getElementById('confidenceLevel').textContent = "85%";
+                document.getElementById('confidenceBar').style.width = "85%";
+                document.getElementById('confidenceBar').classList.remove('bg-blue-600', 'bg-yellow-500');
+                document.getElementById('confidenceBar').classList.add('bg-green-500');
+            } else {
+                recommendationElement.textContent = "Aguardando melhores oportunidades. Os padrões atuais sugerem multiplicadores baixos.";
+                document.getElementById('confidenceLevel').textContent = "65%";
+                document.getElementById('confidenceBar').style.width = "65%";
+                document.getElementById('confidenceBar').classList.remove('bg-blue-600', 'bg-green-500');
+                document.getElementById('confidenceBar').classList.add('bg-yellow-500');
+            }
+        }
+
+        // Pagination for history table
+        let currentPage = 1;
+        const itemsPerPage = 10;
+        
+        function renderHistoryTable(page = 1) {
+            const startIndex = (page - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const paginatedItems = mockRounds.slice(startIndex, endIndex);
+            
+            const tableBody = document.getElementById('historyTableBody');
+            tableBody.innerHTML = '';
+            
+            paginatedItems.forEach(round => {
+                const row = document.createElement('tr');
+                row.className = 'history-item hover:bg-gray-50 transition cursor-pointer';
+                
+                // Determine row color based on multiplier
+                if (round.multiplier >= 10) {
+                    row.classList.add('bg-green-50');
+                } else if (round.multiplier >= 2) {
+                    row.classList.add('bg-yellow-50');
+                }
+                
+                row.innerHTML = 
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${round.id}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm ${round.multiplier >= 10 ? 'text-green-600 font-bold' : round.multiplier >= 2 ? 'text-yellow-600' : 'text-gray-500'}">
+                        ${round.multiplier.toFixed(2)}x
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${round.time}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                            ${round.pattern.includes('Alta') ? 'bg-green-100 text-green-800' : 
+                              round.pattern.includes('Média') ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}">
+                            ${round.pattern}
+                        </span>
+                    </td>
+                ;
+                
+                tableBody.appendChild(row);
+            });
+            
+            // Update pagination info
+            document.getElementById('showingFrom').textContent = startIndex + 1;
+            document.getElementById('showingTo').textContent = Math.min(endIndex, mockRounds.length);
+            document.getElementById('totalItems').textContent = mockRounds.length;
+            
+            // Update button states
+            document.getElementById('prevPage').disabled = page === 1;
+            document.getElementById('nextPage').disabled = endIndex >= mockRounds.length;
+        }
+
+        // Connect button functionality
+        document.getElementById('connectBtn').addEventListener('click', function() {
+            const button = this;
+            const statusIndicator = document.getElementById('statusIndicator');
+            
+            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Conectando...';
+            button.disabled = true;
+            
+            // Simulate connection
+            setTimeout(() => {
+                button.innerHTML = '<i class="fas fa-check mr-2"></i> Conectado';
+                button.classList.remove('bg-green-500', 'hover:bg-green-600');
+                button.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                statusIndicator.textContent = 'Ativo';
+                statusIndicator.classList.remove('bg-green-500');
+                statusIndicator.classList.add('bg-blue-500');
+                
+                // Initialize everything after connection
+                initChart();
+                updateStats();
+                renderHistoryTable();
+            }, 2000);
+        });
+
+        // Pagination event listeners
+        document.getElementById('prevPage').addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                renderHistoryTable(currentPage);
+            }
+        });
+        
+        document.getElementById('nextPage').addEventListener('click', () => {
+            if (currentPage * itemsPerPage < mockRounds.length) {
+                currentPage++;
+                renderHistoryTable(currentPage);
+            }
+        });
+
+        // Bet now button
+        document.getElementById('betNowBtn').addEventListener('click', function() {
+            const button = this;
+            
+            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Processando...';
+            button.disabled = true;
+            
+            // Simulate bet placement
+            setTimeout(() => {
+                button.innerHTML = '<i class="fas fa-check mr-2"></i> Aposta realizada!';
+                button.classList.remove('pulse-animation');
+                
+                setTimeout(() => {
+                    button.innerHTML = '<i class="fas fa-coins mr-2"></i> APOSTAR AGORA';
+                    button.disabled = false;
+                    button.classList.add('pulse-animation');
+                }, 3000);
+            }, 1500);
+        });
+
+        // Initial setup
+        document.addEventListener('DOMContentLoaded', function() {
+            // Show connection prompt
+            setTimeout(() => {
+                const statusIndicator = document.getElementById('statusIndicator');
+                statusIndicator.textContent = 'Desconectado';
+                statusIndicator.classList.remove('bg-green-500');
+                statusIndicator.classList.add('bg-red-500');
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
